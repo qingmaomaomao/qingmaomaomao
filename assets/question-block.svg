@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- 块主体 -->
+  <rect width="32" height="32" fill="#fcc803"/>
+
+  <!-- 高光 -->
+  <rect x="0" y="0" width="32" height="2" fill="#ffeb57"/>
+  <rect x="0" y="0" width="2" height="32" fill="#ffeb57"/>
+
+  <!-- 问号 -->
+  <rect x="12" y="8" width="4" height="4" fill="#8b4513"/>
+  <rect x="16" y="8" width="4" height="4" fill="#8b4513"/>
+  <rect x="20" y="12" width="4" height="4" fill="#8b4513"/>
+  <rect x="16" y="16" width="4" height="4" fill="#8b4513"/>
+  <rect x="16" y="22" width="4" height="4" fill="#8b4513"/>
+
+  <!-- 阴影 -->
+  <rect x="30" y="0" width="2" height="32" fill="#c89800"/>
+  <rect x="0" y="30" width="32" height="2" fill="#c89800"/>
+</svg>

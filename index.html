@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Super Mario - Three.js</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #5c94fc;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        #game-canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 14px;
+            text-shadow: 2px 2px 0px #000;
+            z-index: 10;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 10px;
+            text-align: center;
+            text-shadow: 2px 2px 0px #000;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div>SCORE: <span id="score">000000</span></div>
+        <div>COINS: <span id="coins">00</span></div>
+        <div>LIVES: <span id="lives">3</span></div>
+    </div>
+
+    <div id="controls">
+        <p>方向键 / WASD - 移动 | 空格 - 跳跃 | R - 重新开始</p>
+    </div>
+
+    <div id="game-canvas"></div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>

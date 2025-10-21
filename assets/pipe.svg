@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64" height="128" viewBox="0 0 64 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- 管道顶部 -->
+  <rect x="0" y="0" width="64" height="16" fill="#00b800"/>
+  <rect x="0" y="0" width="64" height="4" fill="#58d854"/>
+  <rect x="0" y="12" width="64" height="4" fill="#008800"/>
+
+  <!-- 管道主体 -->
+  <rect x="8" y="16" width="48" height="112" fill="#00b800"/>
+  <rect x="8" y="16" width="4" height="112" fill="#58d854"/>
+  <rect x="52" y="16" width="4" height="112" fill="#008800"/>
+</svg>
