@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Super Mario - Three.js</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #5c94fc;
+            font-family: 'Courier New', monospace;
+        }
+
+        #game-canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 14px;
+            text-shadow: 2px 2px 0px #000;
+            z-index: 10;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 10px;
+            text-align: center;
+            text-shadow: 2px 2px 0px #000;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div>SCORE: <span id="score">000000</span></div>
+        <div>COINS: <span id="coins">00</span></div>
+        <div>LIVES: <span id="lives">3</span></div>
+    </div>
+
+    <div id="controls">
+        <p>方向键 / WASD - 移动 | 空格 - 跳跃 | R - 重新开始</p>
+    </div>
+
+    <div id="game-canvas"></div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+        }
+    }
+    </script>
+
+    <script type="module">
+import * as THREE from 'three';
+
+// SVG Assets (embedded as data URLs)
+const SVG_ASSETS = {
+    mario: `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <rect x="8" y="4" width="4" height="4" fill="#ff0000"/>
+  <rect x="12" y="4" width="4" height="4" fill="#ff0000"/>
+  <rect x="16" y="4" width="4" height="4" fill="#ff0000"/>
+  <rect x="20" y="4" width="4" height="4" fill="#ff0000"/>
+  <rect x="8" y="8" width="4" height="4" fill="#ff0000"/>
+  <rect x="12" y="8" width="4" height="4" fill="#ff0000"/>
+  <rect x="16" y="8" width="4" height="4" fill="#ffcc99"/>
+  <rect x="20" y="8" width="4" height="4" fill="#ffcc99"/>
+  <rect x="24" y="8" width="4" height="4" fill="#ffcc99"/>
+  <rect x="4" y="12" width="4" height="4" fill="#ff0000"/>
+  <rect x="8" y="12" width="4" height="4" fill="#ffcc99"/>
+  <rect x="12" y="12" width="4" height="4" fill="#ffcc99"/>
+  <rect x="16" y="12" width="4" height="4" fill="#000000"/>
+  <rect x="20" y="12" width="4" height="4" fill="#ffcc99"/>
+  <rect x="24" y="12" width="4" height="4" fill="#000000"/>
+  <rect x="8" y="16" width="4" height="4" fill="#ffcc99"/>
+  <rect x="12" y="16" width="4" height="4" fill="#ffcc99"/>
+  <rect x="16" y="16" width="4" height="4" fill="#ffcc99"/>
+  <rect x="20" y="16" width="4" height="4" fill="#ffcc99"/>
+  <rect x="4" y="20" width="4" height="4" fill="#ff0000"/>
+  <rect x="8" y="20" width="4" height="4" fill="#ff0000"/>
+  <rect x="12" y="20" width="4" height="4" fill="#0000ff"/>
+  <rect x="16" y="20" width="4" height="4" fill="#ff0000"/>
+  <rect x="20" y="20" width="4" height="4" fill="#0000ff"/>
+  <rect x="24" y="20" width="4" height="4" fill="#ff0000"/>
+  <rect x="4" y="24" width="4" height="4" fill="#0000ff"/>
+  <rect x="8" y="24" width="4" height="4" fill="#0000ff"/>
+  <rect x="12" y="24" width="4" height="4" fill="#0000ff"/>
+  <rect x="16" y="24" width="4" height="4" fill="#0000ff"/>
+  <rect x="20" y="24" width="4" height="4" fill="#0000ff"/>
+  <rect x="24" y="24" width="4" height="4" fill="#0000ff"/>
+  <rect x="8" y="28" width="4" height="4" fill="#8b4513"/>
+  <rect x="12" y="28" width="4" height="4" fill="#8b4513"/>
+  <rect x="20" y="28" width="4" height="4" fill="#8b4513"/>
+  <rect x="24" y="28" width="4" height="4" fill="#8b4513"/>
+</svg>`,
+
+    brick: `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" fill="#c84c0c"/>
+  <rect x="0" y="0" width="32" height="2" fill="#dc8c5c"/>
+  <rect x="0" y="0" width="2" height="32" fill="#dc8c5c"/>
+  <rect x="4" y="4" width="10" height="10" fill="#b43c00"/>
+  <rect x="18" y="4" width="10" height="10" fill="#b43c00"/>
+  <rect x="4" y="18" width="10" height="10" fill="#b43c00"/>
+  <rect x="18" y="18" width="10" height="10" fill="#b43c00"/>
+  <rect x="30" y="0" width="2" height="32" fill="#943000"/>
+  <rect x="0" y="30" width="32" height="2" fill="#943000"/>
+</svg>`,
+
+    question: `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" fill="#fcc803"/>
+  <rect x="0" y="0" width="32" height="2" fill="#ffeb57"/>
+  <rect x="0" y="0" width="2" height="32" fill="#ffeb57"/>
+  <rect x="12" y="8" width="4" height="4" fill="#8b4513"/>
+  <rect x="16" y="8" width="4" height="4" fill="#8b4513"/>
+  <rect x="20" y="12" width="4" height="4" fill="#8b4513"/>
+  <rect x="16" y="16" width="4" height="4" fill="#8b4513"/>
+  <rect x="16" y="22" width="4" height="4" fill="#8b4513"/>
+  <rect x="30" y="0" width="2" height="32" fill="#c89800"/>
+  <rect x="0" y="30" width="32" height="2" fill="#c89800"/>
+</svg>`,
+
+    goomba: `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <rect x="8" y="12" width="4" height="4" fill="#c84c0c"/>
+  <rect x="12" y="8" width="4" height="4" fill="#c84c0c"/>
+  <rect x="16" y="8" width="4" height="4" fill="#c84c0c"/>
+  <rect x="20" y="12" width="4" height="4" fill="#c84c0c"/>
+  <rect x="4" y="16" width="4" height="4" fill="#c84c0c"/>
+  <rect x="8" y="16" width="4" height="4" fill="#c84c0c"/>
+  <rect x="12" y="12" width="4" height="4" fill="#c84c0c"/>
+  <rect x="16" y="12" width="4" height="4" fill="#c84c0c"/>
+  <rect x="20" y="16" width="4" height="4" fill="#c84c0c"/>
+  <rect x="24" y="16" width="4" height="4" fill="#c84c0c"/>
+  <rect x="8" y="16" width="4" height="4" fill="#000000"/>
+  <rect x="20" y="16" width="4" height="4" fill="#000000"/>
+  <rect x="12" y="16" width="4" height="4" fill="#ffffff"/>
+  <rect x="16" y="16" width="4" height="4" fill="#ffffff"/>
+  <rect x="12" y="20" width="4" height="4" fill="#000000"/>
+  <rect x="16" y="20" width="4" height="4" fill="#000000"/>
+  <rect x="8" y="24" width="4" height="4" fill="#c84c0c"/>
+  <rect x="12" y="28" width="4" height="4" fill="#8b4513"/>
+  <rect x="16" y="28" width="4" height="4" fill="#8b4513"/>
+  <rect x="20" y="24" width="4" height="4" fill="#c84c0c"/>
+</svg>`,
+
+    ground: `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" fill="#dc7c4c"/>
+  <rect x="0" y="0" width="32" height="2" fill="#fcbc7c"/>
+  <rect x="0" y="0" width="2" height="32" fill="#fcbc7c"/>
+  <rect x="8" y="8" width="4" height="4" fill="#c85c2c"/>
+  <rect x="20" y="8" width="4" height="4" fill="#c85c2c"/>
+  <rect x="8" y="20" width="4" height="4" fill="#c85c2c"/>
+  <rect x="20" y="20" width="4" height="4" fill="#c85c2c"/>
+  <rect x="30" y="0" width="2" height="32" fill="#ac5c2c"/>
+  <rect x="0" y="30" width="32" height="2" fill="#ac5c2c"/>
+</svg>`
+};
+
+// SVG Loader
+class SVGLoader {
+    constructor() {
+        this.cache = new Map();
+    }
+
+    loadSVG(name) {
+        if (this.cache.has(name)) {
+            return Promise.resolve(this.cache.get(name));
+        }
+
+        const svgText = SVG_ASSETS[name];
+        if (!svgText) {
+            return Promise.resolve(this.createDefaultTexture());
+        }
+
+        const img = new Image();
+        const blob = new Blob([svgText], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+
+        return new Promise((resolve) => {
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 32;
+                canvas.height = 32;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.magFilter = THREE.NearestFilter;
+                texture.minFilter = THREE.NearestFilter;
+
+                URL.revokeObjectURL(url);
+                this.cache.set(name, texture);
+                resolve(texture);
+            };
+            img.src = url;
+        });
+    }
+
+    createDefaultTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 32;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ff00ff';
+        ctx.fillRect(0, 0, 32, 32);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.NearestFilter;
+        return texture;
+    }
+}
+
+// Entity Base Class
+class Entity {
+    constructor(x, y, width, height, texture) {
+        this.position = new THREE.Vector2(x, y);
+        this.velocity = new THREE.Vector2(0, 0);
+        this.width = width;
+        this.height = height;
+        this.onGround = false;
+        this.alive = true;
+
+        const material = new THREE.SpriteMaterial({ map: texture });
+        this.sprite = new THREE.Sprite(material);
+        this.sprite.scale.set(width, height, 1);
+        this.updateSpritePosition();
+    }
+
+    updateSpritePosition() {
+        this.sprite.position.set(this.position.x, this.position.y, 0);
+    }
+
+    getBounds() {
+        return {
+            left: this.position.x - this.width / 2,
+            right: this.position.x + this.width / 2,
+            top: this.position.y + this.height / 2,
+            bottom: this.position.y - this.height / 2
+        };
+    }
+
+    checkCollision(other) {
+        const a = this.getBounds();
+        const b = other.getBounds();
+        return !(a.right < b.left || a.left > b.right || a.top < b.bottom || a.bottom > b.top);
+    }
+
+    update(deltaTime) {
+        this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
+        this.updateSpritePosition();
+    }
+
+    destroy() {
+        this.alive = false;
+        if (this.sprite.parent) {
+            this.sprite.parent.remove(this.sprite);
+        }
+    }
+}
+
+// Player Class
+class Player extends Entity {
+    constructor(x, y, texture) {
+        super(x, y, 1, 1, texture);
+        this.moveSpeed = 5;
+        this.jumpSpeed = 12;
+        this.gravity = -25;
+        this.maxFallSpeed = -20;
+        this.keys = { left: false, right: false, jump: false };
+        this.canJump = true;
+        this.facing = 1;
+        this.setupControls();
+    }
+
+    setupControls() {
+        window.addEventListener('keydown', (e) => {
+            switch(e.code) {
+                case 'ArrowLeft':
+                case 'KeyA':
+                    this.keys.left = true;
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    this.keys.right = true;
+                    break;
+                case 'Space':
+                case 'ArrowUp':
+                case 'KeyW':
+                    this.keys.jump = true;
+                    e.preventDefault();
+                    break;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            switch(e.code) {
+                case 'ArrowLeft':
+                case 'KeyA':
+                    this.keys.left = false;
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    this.keys.right = false;
+                    break;
+                case 'Space':
+                case 'ArrowUp':
+                case 'KeyW':
+                    this.keys.jump = false;
+                    break;
+            }
+        });
+    }
+
+    update(deltaTime) {
+        if (this.keys.left) {
+            this.velocity.x = -this.moveSpeed;
+            this.facing = -1;
+            this.sprite.scale.x = -Math.abs(this.sprite.scale.x);
+        } else if (this.keys.right) {
+            this.velocity.x = this.moveSpeed;
+            this.facing = 1;
+            this.sprite.scale.x = Math.abs(this.sprite.scale.x);
+        } else {
+            this.velocity.x = 0;
+        }
+
+        if (this.keys.jump && this.onGround && this.canJump) {
+            this.velocity.y = this.jumpSpeed;
+            this.onGround = false;
+            this.canJump = false;
+        }
+
+        if (!this.keys.jump) {
+            this.canJump = true;
+        }
+
+        if (!this.onGround) {
+            this.velocity.y += this.gravity * deltaTime;
+            this.velocity.y = Math.max(this.velocity.y, this.maxFallSpeed);
+        }
+
+        super.update(deltaTime);
+    }
+}
+
+// Enemy Class
+class Enemy extends Entity {
+    constructor(x, y, texture) {
+        super(x, y, 1, 1, texture);
+        this.moveSpeed = 2;
+        this.velocity.x = -this.moveSpeed;
+        this.direction = -1;
+    }
+
+    update(deltaTime) {
+        this.velocity.x = this.direction * this.moveSpeed;
+        if (!this.onGround) {
+            this.velocity.y += -25 * deltaTime;
+        }
+        super.update(deltaTime);
+    }
+
+    reverseDirection() {
+        this.direction *= -1;
+    }
+
+    squash() {
+        this.alive = false;
+        this.sprite.scale.y = 0.2;
+        setTimeout(() => this.destroy(), 200);
+    }
+}
+
+// Level Class
+class Level {
+    constructor(scene, svgLoader) {
+        this.scene = scene;
+        this.svgLoader = svgLoader;
+        this.blocks = [];
+    }
+
+    async createBlock(x, y, type) {
+        const textureName = type === 'brick' ? 'brick' : type === 'question' ? 'question' : 'ground';
+        const texture = await this.svgLoader.loadSVG(textureName);
+        const material = new THREE.SpriteMaterial({ map: texture });
+        const sprite = new THREE.Sprite(material);
+        sprite.scale.set(1, 1, 1);
+        sprite.position.set(x, y, -0.1);
+        this.scene.add(sprite);
+
+        const block = {
+            sprite,
+            position: { x, y },
+            type,
+            bounds: {
+                left: x - 0.5,
+                right: x + 0.5,
+                top: y + 0.5,
+                bottom: y - 0.5
+            },
+            active: type === 'question'
+        };
+
+        this.blocks.push(block);
+        return block;
+    }
+
+    async buildLevel() {
+        for (let i = -20; i < 100; i++) {
+            await this.createBlock(i, -5, 'ground');
+        }
+
+        for (let i = 5; i < 10; i++) {
+            await this.createBlock(i, -1, 'brick');
+        }
+
+        await this.createBlock(7, 2, 'question');
+        await this.createBlock(12, 2, 'question');
+        await this.createBlock(15, 5, 'question');
+
+        for (let i = 10; i < 15; i++) {
+            await this.createBlock(i, -1, 'brick');
+        }
+
+        for (let i = 18; i < 22; i++) {
+            await this.createBlock(i, 2, 'brick');
+        }
+
+        for (let i = 0; i < 4; i++) {
+            for (let j = 0; j <= i; j++) {
+                await this.createBlock(25 + i, -4 + j, 'brick');
+            }
+        }
+    }
+
+    getBlocks() {
+        return this.blocks;
+    }
+
+    hitBlock(block) {
+        if (block.type === 'question' && block.active) {
+            const originalY = block.sprite.position.y;
+            block.sprite.position.y += 0.2;
+            setTimeout(() => {
+                block.sprite.position.y = originalY;
+            }, 100);
+
+            block.active = false;
+            this.svgLoader.loadSVG('brick').then(texture => {
+                block.sprite.material.map = texture;
+                block.sprite.material.needsUpdate = true;
+            });
+
+            return true;
+        }
+        return false;
+    }
+}
+
+// Game Class
+class Game {
+    constructor() {
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.player = null;
+        this.enemies = [];
+        this.level = null;
+        this.svgLoader = new SVGLoader();
+        this.score = 0;
+        this.coins = 0;
+        this.lives = 3;
+        this.lastTime = 0;
+        this.gameOver = false;
+        this.init();
+    }
+
+    async init() {
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x5c94fc);
+
+        const aspect = window.innerWidth / window.innerHeight;
+        const viewHeight = 10;
+        const viewWidth = viewHeight * aspect;
+
+        this.camera = new THREE.OrthographicCamera(
+            -viewWidth / 2,
+            viewWidth / 2,
+            viewHeight / 2,
+            -viewHeight / 2,
+            0.1,
+            1000
+        );
+        this.camera.position.z = 10;
+
+        this.renderer = new THREE.WebGLRenderer({ antialias: false });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('game-canvas').appendChild(this.renderer.domElement);
+
+        window.addEventListener('resize', () => this.onWindowResize());
+
+        this.level = new Level(this.scene, this.svgLoader);
+        await this.level.buildLevel();
+
+        const marioTexture = await this.svgLoader.loadSVG('mario');
+        this.player = new Player(0, 0, marioTexture);
+        this.scene.add(this.player.sprite);
+
+        await this.spawnEnemies();
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyR') {
+                this.restart();
+            }
+        });
+
+        this.animate();
+    }
+
+    async spawnEnemies() {
+        const goombaTexture = await this.svgLoader.loadSVG('goomba');
+        const enemyPositions = [
+            { x: 8, y: 0 },
+            { x: 15, y: 0 },
+            { x: 25, y: 0 },
+            { x: 30, y: 0 }
+        ];
+
+        for (const pos of enemyPositions) {
+            const enemy = new Enemy(pos.x, pos.y, goombaTexture);
+            this.enemies.push(enemy);
+            this.scene.add(enemy.sprite);
+        }
+    }
+
+    onWindowResize() {
+        const aspect = window.innerWidth / window.innerHeight;
+        const viewHeight = 10;
+        const viewWidth = viewHeight * aspect;
+
+        this.camera.left = -viewWidth / 2;
+        this.camera.right = viewWidth / 2;
+        this.camera.top = viewHeight / 2;
+        this.camera.bottom = -viewHeight / 2;
+        this.camera.updateProjectionMatrix();
+
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    update(deltaTime) {
+        if (this.gameOver) return;
+
+        this.player.update(deltaTime);
+        this.handleBlockCollisions();
+
+        for (const enemy of this.enemies) {
+            if (enemy.alive) {
+                enemy.update(deltaTime);
+                this.handleEnemyBlockCollisions(enemy);
+            }
+        }
+
+        this.handlePlayerEnemyCollisions();
+        this.updateCamera();
+
+        if (this.player.position.y < -10) {
+            this.playerDie();
+        }
+
+        this.updateUI();
+    }
+
+    handleBlockCollisions() {
+        const blocks = this.level.getBlocks();
+        this.player.onGround = false;
+
+        for (const block of blocks) {
+            if (this.checkBlockCollision(this.player, block)) {
+                const playerBounds = this.player.getBounds();
+                const blockBounds = block.bounds;
+
+                const overlapLeft = playerBounds.right - blockBounds.left;
+                const overlapRight = blockBounds.right - playerBounds.left;
+                const overlapTop = playerBounds.top - blockBounds.bottom;
+                const overlapBottom = blockBounds.top - playerBounds.bottom;
+
+                const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+                if (minOverlap === overlapBottom && this.player.velocity.y > 0) {
+                    this.player.position.y = blockBounds.bottom - this.player.height / 2;
+                    this.player.velocity.y = 0;
+                    this.level.hitBlock(block);
+                } else if (minOverlap === overlapTop && this.player.velocity.y <= 0) {
+                    this.player.position.y = blockBounds.top + this.player.height / 2;
+                    this.player.velocity.y = 0;
+                    this.player.onGround = true;
+                } else if (minOverlap === overlapLeft) {
+                    this.player.position.x = blockBounds.left - this.player.width / 2;
+                } else if (minOverlap === overlapRight) {
+                    this.player.position.x = blockBounds.right + this.player.width / 2;
+                }
+
+                this.player.updateSpritePosition();
+            }
+        }
+    }
+
+    handleEnemyBlockCollisions(enemy) {
+        const blocks = this.level.getBlocks();
+        enemy.onGround = false;
+
+        for (const block of blocks) {
+            if (this.checkBlockCollision(enemy, block)) {
+                const enemyBounds = enemy.getBounds();
+                const blockBounds = block.bounds;
+
+                const overlapTop = enemyBounds.top - blockBounds.bottom;
+                const overlapLeft = enemyBounds.right - blockBounds.left;
+                const overlapRight = blockBounds.right - enemyBounds.left;
+
+                const minOverlap = Math.min(overlapTop, overlapLeft, overlapRight);
+
+                if (minOverlap === overlapTop && enemy.velocity.y <= 0) {
+                    enemy.position.y = blockBounds.top + enemy.height / 2;
+                    enemy.velocity.y = 0;
+                    enemy.onGround = true;
+                } else if (minOverlap === overlapLeft || minOverlap === overlapRight) {
+                    enemy.reverseDirection();
+                }
+
+                enemy.updateSpritePosition();
+            }
+        }
+    }
+
+    handlePlayerEnemyCollisions() {
+        for (const enemy of this.enemies) {
+            if (!enemy.alive) continue;
+
+            if (this.player.checkCollision(enemy)) {
+                const playerBounds = this.player.getBounds();
+                const enemyBounds = enemy.getBounds();
+
+                if (playerBounds.bottom >= enemyBounds.top - 0.2 && this.player.velocity.y < 0) {
+                    enemy.squash();
+                    this.player.velocity.y = 8;
+                    this.score += 100;
+                } else {
+                    this.playerDie();
+                }
+            }
+        }
+    }
+
+    checkBlockCollision(entity, block) {
+        const bounds = entity.getBounds();
+        return !(bounds.right < block.bounds.left ||
+                 bounds.left > block.bounds.right ||
+                 bounds.top < block.bounds.bottom ||
+                 bounds.bottom > block.bounds.top);
+    }
+
+    updateCamera() {
+        const targetX = Math.max(0, this.player.position.x);
+        this.camera.position.x = targetX;
+    }
+
+    playerDie() {
+        this.lives--;
+        if (this.lives <= 0) {
+            this.gameOver = true;
+            alert('游戏结束! 按 R 重新开始');
+        } else {
+            this.player.position.set(0, 0);
+            this.player.velocity.set(0, 0);
+            this.camera.position.x = 0;
+        }
+    }
+
+    updateUI() {
+        document.getElementById('score').textContent = String(this.score).padStart(6, '0');
+        document.getElementById('coins').textContent = String(this.coins).padStart(2, '0');
+        document.getElementById('lives').textContent = this.lives;
+    }
+
+    animate(currentTime = 0) {
+        requestAnimationFrame((time) => this.animate(time));
+
+        const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.1);
+        this.lastTime = currentTime;
+
+        if (deltaTime > 0) {
+            this.update(deltaTime);
+        }
+
+        this.renderer.render(this.scene, this.camera);
+    }
+
+    async restart() {
+        this.enemies.forEach(enemy => enemy.destroy());
+        this.enemies = [];
+
+        this.score = 0;
+        this.coins = 0;
+        this.lives = 3;
+        this.gameOver = false;
+
+        this.player.position.set(0, 0);
+        this.player.velocity.set(0, 0);
+        this.player.alive = true;
+        this.camera.position.x = 0;
+
+        await this.spawnEnemies();
+        this.updateUI();
+    }
+}
+
+// Start the game
+const game = new Game();
+console.log('2D Super Mario - Three.js Game Started!');
+    </script>
+</body>
+</html>
