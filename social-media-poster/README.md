@@ -101,7 +101,29 @@ node social-media-poster/cli.js account add-twitter \
 
 ## 使用方法
 
-### 查看所有命令
+### Web 界面（推荐）
+
+最简单的使用方式是通过 Web 界面：
+
+```bash
+# 启动 Web 服务器
+npm run poster:web
+
+# 然后在浏览器中打开
+# http://localhost:3000
+```
+
+Web 界面提供：
+- 📢 可视化发布内容
+- 👥 图形化账号管理
+- 📊 实时状态查看
+- 🔑 YouTube 授权辅助工具
+
+详细使用说明请查看 [WEB_GUIDE.md](./WEB_GUIDE.md)
+
+### 命令行工具
+
+如果你更喜欢命令行，也可以使用 CLI：
 
 ```bash
 node social-media-poster/cli.js --help
