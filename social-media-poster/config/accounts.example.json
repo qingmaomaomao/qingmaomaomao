@@ -1,0 +1,23 @@
+{
+  "youtube": [
+    {
+      "id": "1234567890",
+      "name": "我的 YouTube 频道 1",
+      "clientId": "your-google-client-id.apps.googleusercontent.com",
+      "clientSecret": "your-google-client-secret",
+      "refreshToken": "your-refresh-token",
+      "enabled": true
+    }
+  ],
+  "twitter": [
+    {
+      "id": "0987654321",
+      "name": "我的 Twitter 账号 1",
+      "appKey": "your-twitter-app-key",
+      "appSecret": "your-twitter-app-secret",
+      "accessToken": "your-access-token",
+      "accessSecret": "your-access-secret",
+      "enabled": true
+    }
+  ]
+}

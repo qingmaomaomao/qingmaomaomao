@@ -4,13 +4,30 @@
   "description": "2D Super Mario game built with Three.js and SVG assets",
   "main": "index.html",
   "type": "module",
+  "bin": {
+    "social-poster": "./social-media-poster/cli.js"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "poster": "node ./social-media-poster/cli.js",
+    "poster:help": "node ./social-media-poster/cli.js --help",
+    "poster:example": "node ./social-media-poster/example.js",
+    "poster:web": "node ./social-media-poster/server.js",
+    "poster:start": "node ./social-media-poster/server.js"
   },
   "dependencies": {
-    "three": "^0.160.0"
+    "chalk": "^5.6.2",
+    "commander": "^14.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "googleapis": "^164.1.0",
+    "multer": "^2.0.2",
+    "ora": "^9.0.0",
+    "three": "^0.160.0",
+    "twitter-api-v2": "^1.27.0"
   },
   "devDependencies": {
     "vite": "^5.0.0"
