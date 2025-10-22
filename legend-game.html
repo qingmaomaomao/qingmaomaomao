@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>传奇页游 - Legend Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #gameContainer {
+            position: relative;
+            background: #000;
+            border: 5px solid #8b6914;
+            box-shadow: 0 0 30px rgba(139, 105, 20, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            display: block;
+            background: #0a0f0d;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            color: #fff;
+            font-size: 14px;
+        }
+        .ui-panel {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #8b6914;
+            border-radius: 5px;
+            padding: 10px;
+            pointer-events: auto;
+        }
+        #playerInfo {
+            top: 10px;
+            left: 10px;
+            min-width: 250px;
+        }
+        .info-row {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .bar-container {
+            flex: 1;
+            height: 20px;
+            background: #333;
+            border: 1px solid #666;
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+        .bar {
+            height: 100%;
+            transition: width 0.3s;
+        }
+        .hp-bar { background: linear-gradient(90deg, #c41e3a 0%, #ff4444 100%); }
+        .mp-bar { background: linear-gradient(90deg, #0066cc 0%, #4488ff 100%); }
+        .exp-bar { background: linear-gradient(90deg, #8b6914 0%, #daa520 100%); }
+        .bar-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            line-height: 20px;
+            font-size: 12px;
+            color: #fff;
+            text-shadow: 1px 1px 2px #000;
+        }
+        #skills {
+            bottom: 10px;
+            left: 10px;
+            display: flex;
+            gap: 5px;
+        }
+        .skill-btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(40, 40, 40, 0.9);
+            border: 2px solid #8b6914;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 11px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .skill-btn:hover {
+            background: rgba(60, 60, 40, 0.9);
+            border-color: #daa520;
+            transform: scale(1.05);
+        }
+        .skill-btn.on-cooldown {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .skill-icon {
+            font-size: 20px;
+            margin-bottom: 2px;
+        }
+        .skill-key {
+            font-size: 9px;
+            color: #999;
+        }
+        .cooldown-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            font-size: 10px;
+            text-align: center;
+        }
+        #messages {
+            bottom: 70px;
+            left: 10px;
+            max-width: 400px;
+            pointer-events: none;
+        }
+        .message {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            margin: 3px 0;
+            border-radius: 3px;
+            animation: fadeIn 0.3s;
+        }
+        .message.damage { color: #ff4444; }
+        .message.heal { color: #44ff44; }
+        .message.exp { color: #daa520; }
+        .message.level-up { color: #ffaa00; font-weight: bold; }
+        .message.loot { color: #4488ff; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #characterSelect {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 3px solid #8b6914;
+            border-radius: 10px;
+            padding: 30px;
+            z-index: 100;
+        }
+        #characterSelect h2 {
+            color: #daa520;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        .character-options {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .character-card {
+            width: 150px;
+            padding: 15px;
+            background: rgba(40, 40, 40, 0.8);
+            border: 2px solid #666;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .character-card:hover {
+            border-color: #daa520;
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(218, 165, 32, 0.5);
+        }
+        .character-card.selected {
+            border-color: #daa520;
+            background: rgba(60, 60, 40, 0.8);
+        }
+        .character-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .character-name {
+            font-size: 18px;
+            color: #daa520;
+            margin-bottom: 10px;
+        }
+        .character-desc {
+            font-size: 12px;
+            color: #ccc;
+            line-height: 1.4;
+        }
+        .start-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #8b6914 0%, #daa520 100%);
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .start-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(218, 165, 32, 0.5);
+        }
+        #controls {
+            top: 10px;
+            right: 10px;
+            font-size: 12px;
+            max-width: 200px;
+        }
+        .control-item {
+            margin: 3px 0;
+            color: #daa520;
+        }
+        .floating-text {
+            position: absolute;
+            color: #fff;
+            font-weight: bold;
+            font-size: 16px;
+            pointer-events: none;
+            text-shadow: 2px 2px 4px #000;
+            animation: floatUp 1s forwards;
+        }
+        @keyframes floatUp {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-50px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="1000" height="700"></canvas>
+        <div id="ui">
+            <div id="playerInfo" class="ui-panel">
+                <div style="color: #daa520; font-size: 16px; font-weight: bold; margin-bottom: 10px;">
+                    <span id="playerName"></span> - Lv.<span id="playerLevel">1</span>
+                </div>
+                <div class="info-row">
+                    <span style="width: 50px;">生命:</span>
+                    <div class="bar-container">
+                        <div class="bar hp-bar" id="hpBar" style="width: 100%"></div>
+                        <div class="bar-text" id="hpText">100/100</div>
+                    </div>
+                </div>
+                <div class="info-row">
+                    <span style="width: 50px;">魔法:</span>
+                    <div class="bar-container">
+                        <div class="bar mp-bar" id="mpBar" style="width: 100%"></div>
+                        <div class="bar-text" id="mpText">100/100</div>
+                    </div>
+                </div>
+                <div class="info-row">
+                    <span style="width: 50px;">经验:</span>
+                    <div class="bar-container">
+                        <div class="bar exp-bar" id="expBar" style="width: 0%"></div>
+                        <div class="bar-text" id="expText">0/100</div>
+                    </div>
+                </div>
+                <div style="margin-top: 10px; font-size: 12px; color: #ccc;">
+                    <div>攻击: <span id="playerAtk" style="color: #ff4444;">10</span></div>
+                    <div>防御: <span id="playerDef" style="color: #4488ff;">5</span></div>
+                    <div>金币: <span id="playerGold" style="color: #daa520;">0</span></div>
+                </div>
+            </div>
+
+            <div id="skills" class="ui-panel" style="padding: 5px;"></div>
+
+            <div id="messages"></div>
+
+            <div id="controls" class="ui-panel">
+                <div style="color: #daa520; font-weight: bold; margin-bottom: 5px;">操作说明:</div>
+                <div class="control-item">WASD - 移动</div>
+                <div class="control-item">鼠标点击 - 攻击</div>
+                <div class="control-item">1/2/3/4 - 技能</div>
+                <div class="control-item">空格 - 普通攻击</div>
+            </div>
+
+            <div id="characterSelect">
+                <h2>选择职业</h2>
+                <div class="character-options">
+                    <div class="character-card" data-class="warrior">
+                        <div class="character-icon">⚔️</div>
+                        <div class="character-name">战士</div>
+                        <div class="character-desc">高血量高防御<br>近战物理攻击</div>
+                    </div>
+                    <div class="character-card" data-class="mage">
+                        <div class="character-icon">🔮</div>
+                        <div class="character-name">法师</div>
+                        <div class="character-desc">高魔法攻击<br>远程AOE伤害</div>
+                    </div>
+                    <div class="character-card" data-class="taoist">
+                        <div class="character-icon">☯️</div>
+                        <div class="character-name">道士</div>
+                        <div class="character-desc">召唤与治疗<br>全能辅助型</div>
+                    </div>
+                </div>
+                <button class="start-btn" id="startGame">开始游戏</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 游戏状态
+        const game = {
+            running: false,
+            selectedClass: null,
+            player: null,
+            monsters: [],
+            projectiles: [],
+            items: [],
+            particles: [],
+            keys: {},
+            mouseX: 0,
+            mouseY: 0,
+            messages: [],
+            lastMonsterSpawn: 0,
+            monsterSpawnInterval: 2000
+        };
+
+        // 职业配置
+        const classConfig = {
+            warrior: {
+                name: '战士',
+                icon: '⚔️',
+                color: '#ff4444',
+                baseHp: 150,
+                baseMp: 50,
+                baseAtk: 15,
+                baseDef: 8,
+                speed: 3,
+                skills: [
+                    { name: '刺杀', key: '1', icon: '⚔️', damage: 2, mpCost: 10, cooldown: 2000, range: 80 },
+                    { name: '半月', key: '2', icon: '🌙', damage: 1.5, mpCost: 15, cooldown: 3000, range: 100, aoe: true },
+                    { name: '烈火', key: '3', icon: '🔥', damage: 3, mpCost: 25, cooldown: 5000, range: 80 },
+                ]
+            },
+            mage: {
+                name: '法师',
+                icon: '🔮',
+                color: '#4488ff',
+                baseHp: 80,
+                baseMp: 150,
+                baseAtk: 20,
+                baseDef: 3,
+                speed: 2.5,
+                skills: [
+                    { name: '火球术', key: '1', icon: '🔥', damage: 1.5, mpCost: 8, cooldown: 1000, range: 300, projectile: true },
+                    { name: '雷电术', key: '2', icon: '⚡', damage: 2.5, mpCost: 20, cooldown: 3000, range: 250 },
+                    { name: '冰咆哮', key: '3', icon: '❄️', damage: 2, mpCost: 30, cooldown: 5000, range: 200, aoe: true },
+                ]
+            },
+            taoist: {
+                name: '道士',
+                icon: '☯️',
+                color: '#44ff44',
+                baseHp: 100,
+                baseMp: 120,
+                baseAtk: 12,
+                baseDef: 5,
+                speed: 2.8,
+                skills: [
+                    { name: '治愈术', key: '1', icon: '💚', heal: 30, mpCost: 15, cooldown: 3000, range: 0 },
+                    { name: '施毒术', key: '2', icon: '☠️', damage: 1, mpCost: 10, cooldown: 2000, range: 200, poison: true },
+                    { name: '神圣战甲', key: '3', icon: '🛡️', shield: 50, mpCost: 20, cooldown: 10000, range: 0 },
+                ]
+            }
+        };
+
+        // 怪物配置
+        const monsterTypes = [
+            { name: '僵尸', icon: '🧟', hp: 50, atk: 5, def: 2, exp: 20, gold: 5, color: '#88ff88' },
+            { name: '骷髅', icon: '💀', hp: 40, atk: 8, def: 1, exp: 25, gold: 8, color: '#ffffff' },
+            { name: '沃玛', icon: '🐗', hp: 80, atk: 12, def: 4, exp: 40, gold: 15, color: '#ff8844' },
+            { name: '牛魔', icon: '🐂', hp: 120, atk: 15, def: 6, exp: 60, gold: 25, color: '#ff4444' },
+        ];
+
+        // 创建玩家
+        function createPlayer(classType) {
+            const config = classConfig[classType];
+            return {
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                class: classType,
+                config: config,
+                level: 1,
+                hp: config.baseHp,
+                maxHp: config.baseHp,
+                mp: config.baseMp,
+                maxMp: config.baseMp,
+                atk: config.baseAtk,
+                def: config.baseDef,
+                exp: 0,
+                expToLevel: 100,
+                gold: 0,
+                speed: config.speed,
+                size: 20,
+                skillCooldowns: {},
+                shield: 0,
+                lastRegen: Date.now()
+            };
+        }
+
+        // 创建怪物
+        function spawnMonster() {
+            const edge = Math.floor(Math.random() * 4);
+            let x, y;
+            switch(edge) {
+                case 0: x = Math.random() * canvas.width; y = -20; break;
+                case 1: x = canvas.width + 20; y = Math.random() * canvas.height; break;
+                case 2: x = Math.random() * canvas.width; y = canvas.height + 20; break;
+                case 3: x = -20; y = Math.random() * canvas.height; break;
+            }
+
+            const playerLevel = game.player.level;
+            const availableTypes = monsterTypes.filter((_, i) => i <= Math.min(playerLevel - 1, monsterTypes.length - 1));
+            const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+
+            const levelMultiplier = 1 + (playerLevel - 1) * 0.2;
+
+            return {
+                x, y,
+                type: type.name,
+                icon: type.icon,
+                color: type.color,
+                hp: type.hp * levelMultiplier,
+                maxHp: type.hp * levelMultiplier,
+                atk: type.atk * levelMultiplier,
+                def: type.def * levelMultiplier,
+                exp: type.exp * playerLevel,
+                gold: type.gold * playerLevel,
+                size: 18,
+                speed: 1 + Math.random() * 0.5,
+                lastAttack: 0,
+                attackCooldown: 1500
+            };
+        }
+
+        // 创建抛射物
+        function createProjectile(x, y, targetX, targetY, skill) {
+            const angle = Math.atan2(targetY - y, targetX - x);
+            return {
+                x, y,
+                vx: Math.cos(angle) * 8,
+                vy: Math.sin(angle) * 8,
+                skill: skill,
+                size: 8,
+                life: 100
+            };
+        }
+
+        // 创建粒子效果
+        function createParticle(x, y, color) {
+            for(let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8;
+                game.particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * (2 + Math.random() * 2),
+                    vy: Math.sin(angle) * (2 + Math.random() * 2),
+                    color: color,
+                    size: 3 + Math.random() * 3,
+                    life: 30
+                });
+            }
+        }
+
+        // 显示浮动文字
+        function showFloatingText(x, y, text, color) {
+            const div = document.createElement('div');
+            div.className = 'floating-text';
+            div.textContent = text;
+            div.style.left = x + 'px';
+            div.style.top = y + 'px';
+            div.style.color = color;
+            document.getElementById('gameContainer').appendChild(div);
+            setTimeout(() => div.remove(), 1000);
+        }
+
+        // 添加消息
+        function addMessage(text, type = '') {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message ' + type;
+            msgDiv.textContent = text;
+            const container = document.getElementById('messages');
+            container.appendChild(msgDiv);
+            setTimeout(() => msgDiv.remove(), 3000);
+            if(container.children.length > 5) {
+                container.removeChild(container.firstChild);
+            }
+        }
+
+        // 更新UI
+        function updateUI() {
+            const p = game.player;
+            document.getElementById('playerName').textContent = p.config.name;
+            document.getElementById('playerLevel').textContent = p.level;
+
+            const hpPercent = (p.hp / p.maxHp * 100);
+            document.getElementById('hpBar').style.width = hpPercent + '%';
+            document.getElementById('hpText').textContent = Math.floor(p.hp) + '/' + Math.floor(p.maxHp);
+
+            const mpPercent = (p.mp / p.maxMp * 100);
+            document.getElementById('mpBar').style.width = mpPercent + '%';
+            document.getElementById('mpText').textContent = Math.floor(p.mp) + '/' + Math.floor(p.maxMp);
+
+            const expPercent = (p.exp / p.expToLevel * 100);
+            document.getElementById('expBar').style.width = expPercent + '%';
+            document.getElementById('expText').textContent = Math.floor(p.exp) + '/' + p.expToLevel;
+
+            document.getElementById('playerAtk').textContent = Math.floor(p.atk);
+            document.getElementById('playerDef').textContent = Math.floor(p.def);
+            document.getElementById('playerGold').textContent = p.gold;
+        }
+
+        // 使用技能
+        function useSkill(skill) {
+            const p = game.player;
+            const now = Date.now();
+
+            if(p.skillCooldowns[skill.name] && now < p.skillCooldowns[skill.name]) {
+                return false;
+            }
+
+            if(p.mp < skill.mpCost) {
+                addMessage('魔法不足！', 'damage');
+                return false;
+            }
+
+            p.mp -= skill.mpCost;
+            p.skillCooldowns[skill.name] = now + skill.cooldown;
+
+            // 治疗技能
+            if(skill.heal) {
+                p.hp = Math.min(p.maxHp, p.hp + skill.heal);
+                showFloatingText(p.x, p.y - 30, '+' + skill.heal, '#44ff44');
+                createParticle(p.x, p.y, '#44ff44');
+                addMessage('使用 ' + skill.name, 'heal');
+                return true;
+            }
+
+            // 护盾技能
+            if(skill.shield) {
+                p.shield = skill.shield;
+                showFloatingText(p.x, p.y - 30, '护盾+' + skill.shield, '#4488ff');
+                createParticle(p.x, p.y, '#4488ff');
+                addMessage('使用 ' + skill.name, 'heal');
+                return true;
+            }
+
+            // 攻击技能
+            if(skill.aoe) {
+                // AOE攻击
+                let hitCount = 0;
+                game.monsters.forEach(m => {
+                    const dist = Math.hypot(m.x - p.x, m.y - p.y);
+                    if(dist < skill.range) {
+                        const damage = Math.max(1, p.atk * skill.damage - m.def);
+                        m.hp -= damage;
+                        showFloatingText(m.x, m.y - 20, '-' + Math.floor(damage), '#ff4444');
+                        hitCount++;
+                    }
+                });
+                if(hitCount > 0) {
+                    createParticle(p.x, p.y, '#ff8844');
+                    addMessage('使用 ' + skill.name + ' 命中 ' + hitCount + ' 个敌人', 'damage');
+                }
+            } else if(skill.projectile) {
+                // 抛射物攻击
+                const target = findNearestMonster();
+                if(target) {
+                    game.projectiles.push(createProjectile(p.x, p.y, target.x, target.y, skill));
+                    addMessage('使用 ' + skill.name, 'damage');
+                }
+            } else {
+                // 单体攻击
+                const target = findNearestMonster();
+                if(target && Math.hypot(target.x - p.x, target.y - p.y) < skill.range) {
+                    const damage = Math.max(1, p.atk * skill.damage - target.def);
+                    target.hp -= damage;
+                    showFloatingText(target.x, target.y - 20, '-' + Math.floor(damage), '#ff4444');
+                    createParticle(target.x, target.y, '#ff4444');
+                    addMessage('使用 ' + skill.name + ' 造成 ' + Math.floor(damage) + ' 伤害', 'damage');
+                }
+            }
+
+            return true;
+        }
+
+        // 找最近的怪物
+        function findNearestMonster() {
+            let nearest = null;
+            let minDist = Infinity;
+            game.monsters.forEach(m => {
+                const dist = Math.hypot(m.x - game.player.x, m.y - game.player.y);
+                if(dist < minDist) {
+                    minDist = dist;
+                    nearest = m;
+                }
+            });
+            return nearest;
+        }
+
+        // 玩家升级
+        function levelUp() {
+            const p = game.player;
+            p.level++;
+            p.exp = 0;
+            p.expToLevel = Math.floor(p.expToLevel * 1.5);
+
+            // 属性成长
+            p.maxHp += 20 + p.level * 2;
+            p.maxMp += 15 + p.level * 2;
+            p.hp = p.maxHp;
+            p.mp = p.maxMp;
+            p.atk += 3 + p.level * 0.5;
+            p.def += 2 + p.level * 0.3;
+
+            showFloatingText(p.x, p.y - 40, '升级！', '#ffaa00');
+            createParticle(p.x, p.y, '#ffaa00');
+            addMessage('恭喜升级！当前等级: ' + p.level, 'level-up');
+        }
+
+        // 更新游戏逻辑
+        function update() {
+            if(!game.running) return;
+
+            const p = game.player;
+            const now = Date.now();
+
+            // 玩家移动
+            let dx = 0, dy = 0;
+            if(game.keys['w'] || game.keys['ArrowUp']) dy -= 1;
+            if(game.keys['s'] || game.keys['ArrowDown']) dy += 1;
+            if(game.keys['a'] || game.keys['ArrowLeft']) dx -= 1;
+            if(game.keys['d'] || game.keys['ArrowRight']) dx += 1;
+
+            if(dx !== 0 || dy !== 0) {
+                const len = Math.sqrt(dx * dx + dy * dy);
+                dx /= len; dy /= len;
+                p.x += dx * p.speed;
+                p.y += dy * p.speed;
+                p.x = Math.max(p.size, Math.min(canvas.width - p.size, p.x));
+                p.y = Math.max(p.size, Math.min(canvas.height - p.size, p.y));
+            }
+
+            // 生命和魔法恢复
+            if(now - p.lastRegen > 1000) {
+                p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.02);
+                p.mp = Math.min(p.maxMp, p.mp + p.maxMp * 0.03);
+                p.lastRegen = now;
+                if(p.shield > 0) p.shield = Math.max(0, p.shield - 1);
+            }
+
+            // 生成怪物
+            if(now - game.lastMonsterSpawn > game.monsterSpawnInterval && game.monsters.length < 20) {
+                game.monsters.push(spawnMonster());
+                game.lastMonsterSpawn = now;
+            }
+
+            // 更新怪物
+            game.monsters.forEach(m => {
+                // 追击玩家
+                const dx = p.x - m.x;
+                const dy = p.y - m.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if(dist > m.size + p.size) {
+                    m.x += (dx / dist) * m.speed;
+                    m.y += (dy / dist) * m.speed;
+                } else {
+                    // 攻击玩家
+                    if(now - m.lastAttack > m.attackCooldown) {
+                        let damage = Math.max(1, m.atk - p.def);
+                        if(p.shield > 0) {
+                            const shieldBlock = Math.min(p.shield, damage);
+                            p.shield -= shieldBlock;
+                            damage -= shieldBlock;
+                        }
+                        p.hp -= damage;
+                        showFloatingText(p.x, p.y - 20, '-' + Math.floor(damage), '#ff4444');
+                        m.lastAttack = now;
+
+                        if(p.hp <= 0) {
+                            addMessage('你死了！游戏结束', 'damage');
+                            setTimeout(() => location.reload(), 2000);
+                        }
+                    }
+                }
+            });
+
+            // 更新抛射物
+            game.projectiles.forEach((proj, i) => {
+                proj.x += proj.vx;
+                proj.y += proj.vy;
+                proj.life--;
+
+                // 检测碰撞
+                game.monsters.forEach(m => {
+                    const dist = Math.hypot(m.x - proj.x, m.y - proj.y);
+                    if(dist < m.size && proj.life > 0) {
+                        const damage = Math.max(1, p.atk * proj.skill.damage - m.def);
+                        m.hp -= damage;
+                        showFloatingText(m.x, m.y - 20, '-' + Math.floor(damage), '#ff4444');
+                        createParticle(m.x, m.y, '#ff4444');
+                        proj.life = 0;
+                    }
+                });
+
+                if(proj.life <= 0 || proj.x < 0 || proj.x > canvas.width || proj.y < 0 || proj.y > canvas.height) {
+                    game.projectiles.splice(i, 1);
+                }
+            });
+
+            // 移除死亡怪物
+            game.monsters = game.monsters.filter(m => {
+                if(m.hp <= 0) {
+                    p.exp += m.exp;
+                    p.gold += m.gold;
+                    showFloatingText(m.x, m.y, '+' + m.exp + ' EXP', '#daa520');
+                    createParticle(m.x, m.y, '#daa520');
+                    addMessage('击败 ' + m.type + ' 获得 ' + m.exp + ' 经验 ' + m.gold + ' 金币', 'exp');
+
+                    if(p.exp >= p.expToLevel) {
+                        levelUp();
+                    }
+                    return false;
+                }
+                return true;
+            });
+
+            // 更新粒子
+            game.particles.forEach((part, i) => {
+                part.x += part.vx;
+                part.y += part.vy;
+                part.life--;
+                if(part.life <= 0) {
+                    game.particles.splice(i, 1);
+                }
+            });
+
+            updateUI();
+        }
+
+        // 渲染
+        function render() {
+            // 清空画布
+            ctx.fillStyle = '#0a0f0d';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制网格
+            ctx.strokeStyle = 'rgba(50, 100, 50, 0.2)';
+            ctx.lineWidth = 1;
+            for(let x = 0; x < canvas.width; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for(let y = 0; y < canvas.height; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // 绘制粒子
+            game.particles.forEach(part => {
+                ctx.fillStyle = part.color;
+                ctx.globalAlpha = part.life / 30;
+                ctx.beginPath();
+                ctx.arc(part.x, part.y, part.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+
+            // 绘制怪物
+            game.monsters.forEach(m => {
+                // 血条
+                ctx.fillStyle = '#333';
+                ctx.fillRect(m.x - 20, m.y - 30, 40, 4);
+                ctx.fillStyle = '#c41e3a';
+                ctx.fillRect(m.x - 20, m.y - 30, 40 * (m.hp / m.maxHp), 4);
+
+                // 怪物图标
+                ctx.font = '30px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(m.icon, m.x, m.y);
+
+                // 名称
+                ctx.font = '10px Arial';
+                ctx.fillStyle = m.color;
+                ctx.fillText(m.type, m.x, m.y + 25);
+            });
+
+            // 绘制抛射物
+            game.projectiles.forEach(proj => {
+                ctx.fillStyle = '#ff8844';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ff8844';
+                ctx.beginPath();
+                ctx.arc(proj.x, proj.y, proj.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            // 绘制玩家
+            const p = game.player;
+
+            // 护盾效果
+            if(p.shield > 0) {
+                ctx.strokeStyle = '#4488ff';
+                ctx.lineWidth = 3;
+                ctx.globalAlpha = 0.5;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size + 5, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+                ctx.lineWidth = 1;
+            }
+
+            // 血条
+            ctx.fillStyle = '#333';
+            ctx.fillRect(p.x - 20, p.y - 35, 40, 5);
+            ctx.fillStyle = '#c41e3a';
+            ctx.fillRect(p.x - 20, p.y - 35, 40 * (p.hp / p.maxHp), 5);
+
+            // 蓝条
+            ctx.fillStyle = '#333';
+            ctx.fillRect(p.x - 20, p.y - 28, 40, 3);
+            ctx.fillStyle = '#0066cc';
+            ctx.fillRect(p.x - 20, p.y - 28, 40 * (p.mp / p.maxMp), 3);
+
+            // 玩家图标
+            ctx.font = '35px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(p.config.icon, p.x, p.y);
+
+            // 等级
+            ctx.font = 'bold 12px Arial';
+            ctx.fillStyle = '#ffaa00';
+            ctx.fillText('Lv.' + p.level, p.x, p.y + 30);
+        }
+
+        // 游戏循环
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 初始化技能按钮
+        function initSkills() {
+            const skillsDiv = document.getElementById('skills');
+            skillsDiv.innerHTML = '';
+
+            game.player.config.skills.forEach(skill => {
+                const btn = document.createElement('div');
+                btn.className = 'skill-btn';
+                btn.innerHTML = `
+                    <div class="skill-icon">${skill.icon}</div>
+                    <div class="skill-key">${skill.key}</div>
+                `;
+                btn.onclick = () => useSkill(skill);
+                skillsDiv.appendChild(btn);
+
+                // 冷却更新
+                setInterval(() => {
+                    const now = Date.now();
+                    const cooldownEnd = game.player.skillCooldowns[skill.name] || 0;
+                    if(now < cooldownEnd) {
+                        btn.classList.add('on-cooldown');
+                        const remaining = Math.ceil((cooldownEnd - now) / 1000);
+                        let overlay = btn.querySelector('.cooldown-overlay');
+                        if(!overlay) {
+                            overlay = document.createElement('div');
+                            overlay.className = 'cooldown-overlay';
+                            btn.appendChild(overlay);
+                        }
+                        overlay.textContent = remaining + 's';
+                    } else {
+                        btn.classList.remove('on-cooldown');
+                        const overlay = btn.querySelector('.cooldown-overlay');
+                        if(overlay) overlay.remove();
+                    }
+                }, 100);
+            });
+        }
+
+        // 事件监听
+        document.addEventListener('keydown', e => {
+            game.keys[e.key.toLowerCase()] = true;
+
+            // 技能快捷键
+            if(game.player) {
+                const skill = game.player.config.skills.find(s => s.key === e.key);
+                if(skill) {
+                    useSkill(skill);
+                }
+            }
+
+            // 空格攻击
+            if(e.key === ' ' && game.player) {
+                const target = findNearestMonster();
+                if(target && Math.hypot(target.x - game.player.x, target.y - game.player.y) < 80) {
+                    const damage = Math.max(1, game.player.atk - target.def);
+                    target.hp -= damage;
+                    showFloatingText(target.x, target.y - 20, '-' + Math.floor(damage), '#ff4444');
+                    createParticle(target.x, target.y, '#ff4444');
+                }
+            }
+        });
+
+        document.addEventListener('keyup', e => {
+            game.keys[e.key.toLowerCase()] = false;
+        });
+
+        canvas.addEventListener('click', e => {
+            if(!game.player) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            // 检查是否点击怪物
+            game.monsters.forEach(m => {
+                const dist = Math.hypot(m.x - clickX, m.y - clickY);
+                if(dist < m.size) {
+                    const playerDist = Math.hypot(m.x - game.player.x, m.y - game.player.y);
+                    if(playerDist < 100) {
+                        const damage = Math.max(1, game.player.atk - m.def);
+                        m.hp -= damage;
+                        showFloatingText(m.x, m.y - 20, '-' + Math.floor(damage), '#ff4444');
+                        createParticle(m.x, m.y, '#ff4444');
+                    }
+                }
+            });
+        });
+
+        // 职业选择
+        document.querySelectorAll('.character-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.character-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                game.selectedClass = card.dataset.class;
+            });
+        });
+
+        document.getElementById('startGame').addEventListener('click', () => {
+            if(!game.selectedClass) {
+                alert('请选择一个职业！');
+                return;
+            }
+
+            game.player = createPlayer(game.selectedClass);
+            game.running = true;
+            document.getElementById('characterSelect').style.display = 'none';
+
+            initSkills();
+            updateUI();
+            addMessage('欢迎来到传奇世界！', 'level-up');
+        });
+
+        // 启动游戏循环
+        gameLoop();
+    </script>
+</body>
+</html>
